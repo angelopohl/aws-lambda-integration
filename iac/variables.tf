@@ -14,3 +14,9 @@ variable "environment" {
     type = string
     description = "Ambientes del proyecto (DEV, QA y PROD)"
 }
+
+variable "suffix" {
+    type = string
+    description = "Suffix para el bucket"
+    default = "iaclabafc276733"
+}
