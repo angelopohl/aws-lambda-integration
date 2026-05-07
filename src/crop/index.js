@@ -1,36 +1,53 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} = require("@aws-sdk/client-s3");
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
-  console.log("Evento recibido desde API Gateway:", JSON.stringify(event));
+  const bucketName = process.env.BUCKET_NAME;
 
-  try {
-    const bucketName = process.env.BUCKET_NAME;
-    const fileName = `${process.env.UPLOAD_PREFIX || "uploads/"}imagen-${Date.now()}.jpg`;
+  for (const record of event.Records) {
+    try {
+      const body = JSON.parse(record.body);
+      const s3Event = body.Records[0];
+      const originalKey = s3Event.s3.object.key;
 
-    const imageContent =
-      "Contenido simulado de la imagen (base64 decodificado)";
+      const getObj = await s3.send(
+        new GetObjectCommand({
+          Bucket: bucketName,
+          Key: originalKey,
+        }),
+      );
 
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucketName,
-        Key: fileName,
-        Body: imageContent,
-        ContentType: "image/jpeg",
-      }),
-    );
+      const streamToBuffer = (stream) =>
+        new Promise((resolve, reject) => {
+          const chunks = [];
+          stream.on("data", (chunk) => chunks.push(chunk));
+          stream.on("error", reject);
+          stream.on("end", () => resolve(Buffer.concat(chunks)));
+        });
 
-    console.log(`Imagen guardada exitosamente en S3: ${fileName}`);
+      const imageBuffer = await streamToBuffer(getObj.Body);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: "Upload exitoso", file: fileName }),
-    };
-  } catch (error) {
-    console.error("Error al subir la imagen:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: "Error interno del servidor" }),
-    };
+      const processedBuffer = imageBuffer.slice(
+        0,
+        Math.floor(imageBuffer.length * 0.8),
+      );
+      const newKey = originalKey.replace("uploads/", "processed/");
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucketName,
+          Key: newKey,
+          Body: processedBuffer,
+          ContentType: "image/jpeg",
+        }),
+      );
+
+      console.log("Procesamiento completado");
+    } catch (e) {
+      console.error(e);
+    }
   }
 };

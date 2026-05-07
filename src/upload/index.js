@@ -1,21 +1,29 @@
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+
 exports.handler = async (event) => {
-  console.log(
-    "Mensajes recibidos desde SQS (Batch):",
-    JSON.stringify(event.Records),
-  );
+  try {
+    const bucketName = process.env.BUCKET_NAME;
+    const fileName = `${process.env.UPLOAD_PREFIX || "uploads/"}imagen-${Date.now()}.jpg`;
 
-  const batchItemFailures = [];
+    const imageBuffer = event.body
+      ? Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8")
+      : Buffer.from("imagen_simulada");
 
-  for (const record of event.Records) {
-    try {
-      console.log(`Procesando mensaje ID: ${record.messageId}`);
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: fileName,
+        Body: imageBuffer,
+        ContentType: "image/jpeg",
+      }),
+    );
 
-      console.log("Recorte simulado completado con éxito.");
-    } catch (error) {
-      console.error(`Error procesando mensaje ${record.messageId}:`, error);
-      batchItemFailures.push({ itemIdentifier: record.messageId });
-    }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: "Upload exitoso", file: fileName }),
+    };
+  } catch (error) {
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
-
-  return { batchItemFailures };
 };
