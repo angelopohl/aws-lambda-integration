@@ -1,11 +1,7 @@
 {
-  "name": "upload",
+  "name": "upload-lambda",
   "version": "1.0.0",
-  "description": "",
+  "description": "Lambda para recibir imagenes del API Gateway y subirlas a S3",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+  "dependencies": {}
 }

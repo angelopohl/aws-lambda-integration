@@ -31,4 +31,4 @@ aws-lambda-integration/
 │ ├── outputs.tf  
 │ ├── dev.tfvars  
 │ ├── qa.tfvars  
-│ └── prod.tfvars
+│ └── prod.tfvars 
